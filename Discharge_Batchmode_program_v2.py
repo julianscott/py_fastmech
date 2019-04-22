@@ -257,8 +257,16 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     print("row: ",row)
     print("Q: ",Q)
     print("H_DS: ",H_DS)
+    # Create pattern to idetify the correct ObsWSEs csv file for the given Q
     Q_match = "_" + re.sub("\\.","_",str(Q)) + ".csv"
-    ObsQ_match = [s for s in ObsWse_list if Q_match in s][0]
+    # test whether each element in ObsWSEs contains the pattern 
+    matches = [x for x in ObsWse_list if Q_match in x]
+    # test whether there is more than one match; only proceed if true
+    if len(matches) == 1:
+        ObsQ_match = matches[0]
+    else:
+        ObsQ_match = ""
+        print("No Obs WSE csv file found")
     meas_wse = np.genfromtxt(ObsQ_match, delimiter=',', skip_header=1)
     nummeas = meas_wse.shape[0]
     meas_and_sim_wse = np.zeros(shape=(nummeas, numIters+1))

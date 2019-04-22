@@ -238,22 +238,27 @@ iniType = config.getfloat('Params','iniType')
 # Drag coef for 1D Step backwater initial condition model
 OneDCD = config.getfloat('Params','OneDCD')
 
+# Solution iterations 
+sol_iterations = 50
+
 # Number of iterations to consider in rmse
 numIters = 1
 # Create output box (columns: Q, H_DS, Cd, RMSE, MEOD; rows = fastmech runs)
-Qi = 0
-row = 0
 outputbox = np.zeros(shape=(Q_count,QHDS_table.shape[0]+2))
 # get start time for timing batch process
 start = datetime.datetime.now()
+
+# For testing or stepping through for loop 
+Qi = 0
+row = 0
 for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     Q = QHDS_table[row,0]
     H_DS = QHDS_table[row,1]
     print("row: ",row)
     print("Q: ",Q)
     print("H_DS: ",H_DS)
-    Q_match = re.sub("\\.","_",str(Q)) + ".csv"
-    ObsQ_match = [s for s in ObsWse_list if Q_match in s][0]
+    Q_match = "_" + re.sub("\\.","_",str(Q)) + ".csv"
+    ObsQ_match = [s for s in ObsWse_list if Q_match in s]
     meas_wse = np.genfromtxt(ObsQ_match, delimiter=',', skip_header=1)
     nummeas = meas_wse.shape[0]
     meas_and_sim_wse = np.zeros(shape=(nummeas, numIters+1))
@@ -262,7 +267,7 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     fastmech_change_H_DS(hdf5_file_name, H_DS)
     fastmech_change_Q(hdf5_file_name,Q)
     fastmech_BCs(hdf5_file_name,iniType, OneDCD, Cddistribution)
-    fastmech_params(hdf5_file_name,50, 0.0075)
+    fastmech_params(hdf5_file_name,sol_iterations, 0.0075)
     for path in execute(["Fastmech.exe", hdf5_file_name]):
 #        print(path, end="")
         # Retrieve iteration output as a string
@@ -283,6 +288,7 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     cellLocator2D = vtk.vtkCellLocator()
     cellLocator2D.SetDataSet(SGrid)
     cellLocator2D.BuildLocator()
+    WSE_2D = SGrid.GetPointData().GetScalars('WSE')
     IBC_2D = SGrid.GetPointData().GetScalars('IBC')
     Velocity_2D = SGrid.GetPointData().GetScalars('Velocity')
     
@@ -320,5 +326,5 @@ df = pd.DataFrame(outputbox,columns = ['Q','H_DS','RMSE','MEOD'])
 df.to_csv(config.get('Params','outputbox'),index = False)
 
 end = datetime.datetime.now()
-print("Start time: " +str(start) + "End time: " + str(end))
+print("Start time: " +str(start) + "   End time: " + str(end))
 

@@ -258,7 +258,7 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     print("Q: ",Q)
     print("H_DS: ",H_DS)
     Q_match = "_" + re.sub("\\.","_",str(Q)) + ".csv"
-    ObsQ_match = [s for s in ObsWse_list if Q_match in s]
+    ObsQ_match = [s for s in ObsWse_list if Q_match in s][0]
     meas_wse = np.genfromtxt(ObsQ_match, delimiter=',', skip_header=1)
     nummeas = meas_wse.shape[0]
     meas_and_sim_wse = np.zeros(shape=(nummeas, numIters+1))

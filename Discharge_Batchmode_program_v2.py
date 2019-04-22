@@ -243,8 +243,8 @@ sol_iterations = 50
 
 # Number of iterations to consider in rmse
 numIters = 1
-# Create output box (columns: Q, H_DS, Cd, RMSE, MEOD; rows = fastmech runs)
-outputbox = np.zeros(shape=(Q_count,QHDS_table.shape[0]+2))
+# Create output box (columns: Q, H_DS, RMSE, MEOD; rows = fastmech runs)
+outputbox = np.zeros(shape=(Q_count,4))
 # get start time for timing batch process
 start = datetime.datetime.now()
 

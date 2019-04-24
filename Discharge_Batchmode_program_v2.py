@@ -165,16 +165,18 @@ def create_vtk_structured_grid(sgrid, hdf5_file_name, xoffset, yoffset):
     topo_grp = file['iRIC/iRICZone/FlowSolution1/Elevation']
     # print(topo_grp.keys())
     ibc_grp = file['iRIC/iRICZone/FlowSolution1/IBC']
-    velx_grp = file['iRIC/iRICZone/FlowSolution1/VelocityX']
-    vely_grp = file['iRIC/iRICZone/FlowSolution1/VelocityY']
+#    velx_grp = file['iRIC/iRICZone/FlowSolution1/VelocityX']
+#    vely_grp = file['iRIC/iRICZone/FlowSolution1/VelocityY']
+    depth_grp = file['iRIC/iRICZone/FlowSolution1/Depth']
 
     xcoord_data = xcoord_grp[u' data']
     ycoord_data = ycoord_grp[u' data']
     wse_data = wse_grp[u' data']
     topo_data = topo_grp[u' data']
     ibc_data = ibc_grp[u' data']
-    velx_data = velx_grp[u' data']
-    vely_data = vely_grp[u' data']
+#    velx_data = velx_grp[u' data']
+#    vely_data = vely_grp[u' data']
+    depth_data = depth_grp[u' data']
     # SGrid = vtk.vtkStructuredGrid()
     ny, nx, = xcoord_data.shape
     # print(ny, nx)
@@ -184,22 +186,27 @@ def create_vtk_structured_grid(sgrid, hdf5_file_name, xoffset, yoffset):
     wseVal.SetNumberOfComponents(1)
     ibcVal = vtk.vtkIntArray()
     ibcVal.SetNumberOfComponents(1)
-    velVal = vtk.vtkFloatArray()
-    velVal.SetNumberOfComponents(1)
+#    velVal = vtk.vtkFloatArray()
+#    velVal.SetNumberOfComponents(1)
+    depthVal = vtk.vtkFloatArray()
+    depthVal.SetNumberOfComponents(1)
     for j in range(ny):
         for i in range(nx):
             points.InsertNextPoint(xcoord_data[j, i] - xoffset, ycoord_data[j, i] - yoffset, 0.0)
             wseVal.InsertNextValue(wse_data[j, i])
             ibcVal.InsertNextValue(ibc_data[j, i])
-            velVal.InsertNextValue(np.sqrt(np.power(velx_data[j, i],2) + np.power(vely_data[j,i],2)))
+#            velVal.InsertNextValue(np.sqrt(np.power(velx_data[j, i],2) + np.power(vely_data[j,i],2)))
+            depthVal.InsertNextValue(depth_data[j, i])
         sgrid.SetPoints(points)
 
         sgrid.GetPointData().AddArray(wseVal)
         sgrid.GetPointData().AddArray(ibcVal)
-        sgrid.GetPointData().AddArray(velVal)
+#        sgrid.GetPointData().AddArray(velVal)
+        sgrid.GetPointData().AddArray(depthVal)
     wseVal.SetName("WSE")
     ibcVal.SetName("IBC")
-    velVal.SetName("Velocity")
+#    velVal.SetName("Velocity")
+    depthVal.SetName("Depth")
 
 # Set the config file 
 # flow folder
@@ -228,6 +235,12 @@ Cddistribution = 1
 add_fastmech_solver_to_path(config.get('Params','lib_path'))
 add_fastmech_solver_to_path(config.get('Params','solver_path'))
 
+# read in coordinates of study area grid cell centers
+# csv format: pt number,X,Y,Z
+#study_area_coords = "E:\\_DoD\\_Camp_Pendleton_Survey\\IRIC\\_Modeling_dir\\_LowFlows_Model_v2\\smrf_DEM_v24_points_penz_m.txt"
+#study_area_tbl = np.genfromtxt(study_area_coords, delimiter=',', skip_header=0)
+study_area_tbl = np.genfromtxt(config.get('Params','study_area_coords'), delimiter=',', skip_header=0)
+
 # Set working directory from parameter in config file
 os.chdir(config.get('Params','working_dir'))
 # This is from Rich's original code; Leave set to 0.
@@ -239,7 +252,7 @@ iniType = config.getfloat('Params','iniType')
 OneDCD = config.getfloat('Params','OneDCD')
 
 # Solution iterations 
-sol_iterations = 50
+sol_iterations = 1000
 
 # Number of iterations to consider in rmse
 numIters = 1
@@ -298,7 +311,8 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     cellLocator2D.BuildLocator()
     WSE_2D = SGrid.GetPointData().GetScalars('WSE')
     IBC_2D = SGrid.GetPointData().GetScalars('IBC')
-    Velocity_2D = SGrid.GetPointData().GetScalars('Velocity')
+#    Velocity_2D = SGrid.GetPointData().GetScalars('Velocity')
+    Depth_2D = SGrid.GetPointData().GetScalars('Depth')
     
     # Create container for simulated WSEs at the coordinates of the Obs WSEs    
     simwse = np.zeros(meas_wse.shape[0])
@@ -328,8 +342,48 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     print("Discharge:",Q)
     print("Mean Error On Discharge:",meod)
     print("RMSE: ",rmse_i)
-   
-# put results into a dataframe and save to working directory
+    
+    # Extract WSEs for the given Q for the pixel center coordinate of the area of interest
+    # Create container for coordinate of the area of interest  
+    studyareaWSE_box = np.zeros(study_area_tbl.shape[0])
+    studyareaIBC_box = np.zeros(study_area_tbl.shape[0])
+    studyareaDepth_box = np.zeros(study_area_tbl.shape[0])
+#    counter = 0
+#    line = study_area_tbl[counter]
+    for counter,line in  enumerate (study_area_tbl):
+        point2D = [line[1]-xoffset, line[2]-yoffset, 0.0]
+        pt1 = [line[1]-xoffset, line[2]-yoffset, 10.0]
+        pt2 = [line[1]-xoffset, line[2]-yoffset, -10]
+        idlist1 = vtk.vtkIdList()
+        cellLocator2D.FindCellsAlongLine(pt1,pt2,0.0, idlist1)
+        # retrieve simulated WSEs for study area
+        try:
+            WSEout = getCellValue(SGrid, point2D, idlist1.GetId(0), WSE_2D)
+        except ValueError:
+            WSEout = -9999
+        studyareaWSE_box[counter] = WSEout
+        # retrieve simualtion IBC 
+        try:
+            IBCout = getCellValue(SGrid, point2D, idlist1.GetId(0), IBC_2D)
+        except ValueError:
+            IBCout = -9999
+        studyareaIBC_box[counter] = IBCout
+        
+        # retrieve simualtion Depth 
+        try:
+            Depthout = getCellValue(SGrid, point2D, idlist1.GetId(0), Depth_2D)
+        except ValueError:
+            Depthout = -9999
+        studyareaDepth_box[counter] = Depthout
+        
+    # put model WSE results for entire grid as a new column in the study_area_tbl
+    study_area_tbl_out  = pd.DataFrame(study_area_tbl,columns = ['ID','X','Y','Z'])
+    study_area_tbl_out['simWSE'] = studyareaWSE_box
+    study_area_tbl_out['simIBC'] = studyareaIBC_box
+    study_area_tbl_out['simDepth'] = studyareaDepth_box
+    study_area_tbl_out.to_csv(re.sub("\\.","_",str(Q))  + '_' + config.get('Params','study_area_tbl_out'),index = False)
+     
+# put model run results into a dataframe and save to working directory
 df = pd.DataFrame(outputbox,columns = ['Q','H_DS','RMSE','MEOD'])
 df.to_csv(config.get('Params','outputbox'),index = False)
 

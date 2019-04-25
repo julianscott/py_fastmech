@@ -378,9 +378,9 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
         
     # put model WSE results for entire grid as a new column in the study_area_tbl
     study_area_tbl_out  = pd.DataFrame(study_area_tbl,columns = ['ID','X','Y','Z'])
-    study_area_tbl_out['simWSE'] = studyareaWSE_box
+    study_area_tbl_out['WaterSurfaceElevation'] = studyareaWSE_box
 #    study_area_tbl_out['simIBC'] = studyareaIBC_box
-    study_area_tbl_out['simDepth'] = studyareaDepth_box
+    study_area_tbl_out['Depth'] = studyareaDepth_box
     study_area_tbl_out.to_csv(re.sub("\\.","_",str(Q))  + '_' + config.get('Params','study_area_tbl_out'),index = False)
      
 # put model run results into a dataframe and save to working directory

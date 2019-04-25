@@ -164,7 +164,7 @@ def create_vtk_structured_grid(sgrid, hdf5_file_name, xoffset, yoffset):
     # print(wse_grp.keys())
     topo_grp = file['iRIC/iRICZone/FlowSolution1/Elevation']
     # print(topo_grp.keys())
-    ibc_grp = file['iRIC/iRICZone/FlowSolution1/IBC']
+#    ibc_grp = file['iRIC/iRICZone/FlowSolution1/IBC']
 #    velx_grp = file['iRIC/iRICZone/FlowSolution1/VelocityX']
 #    vely_grp = file['iRIC/iRICZone/FlowSolution1/VelocityY']
     depth_grp = file['iRIC/iRICZone/FlowSolution1/Depth']
@@ -173,7 +173,7 @@ def create_vtk_structured_grid(sgrid, hdf5_file_name, xoffset, yoffset):
     ycoord_data = ycoord_grp[u' data']
     wse_data = wse_grp[u' data']
     topo_data = topo_grp[u' data']
-    ibc_data = ibc_grp[u' data']
+#    ibc_data = ibc_grp[u' data']
 #    velx_data = velx_grp[u' data']
 #    vely_data = vely_grp[u' data']
     depth_data = depth_grp[u' data']
@@ -184,8 +184,8 @@ def create_vtk_structured_grid(sgrid, hdf5_file_name, xoffset, yoffset):
     points = vtk.vtkPoints()
     wseVal = vtk.vtkFloatArray()
     wseVal.SetNumberOfComponents(1)
-    ibcVal = vtk.vtkIntArray()
-    ibcVal.SetNumberOfComponents(1)
+#    ibcVal = vtk.vtkIntArray()
+#    ibcVal.SetNumberOfComponents(1)
 #    velVal = vtk.vtkFloatArray()
 #    velVal.SetNumberOfComponents(1)
     depthVal = vtk.vtkFloatArray()
@@ -194,17 +194,17 @@ def create_vtk_structured_grid(sgrid, hdf5_file_name, xoffset, yoffset):
         for i in range(nx):
             points.InsertNextPoint(xcoord_data[j, i] - xoffset, ycoord_data[j, i] - yoffset, 0.0)
             wseVal.InsertNextValue(wse_data[j, i])
-            ibcVal.InsertNextValue(ibc_data[j, i])
+#            ibcVal.InsertNextValue(ibc_data[j, i])
 #            velVal.InsertNextValue(np.sqrt(np.power(velx_data[j, i],2) + np.power(vely_data[j,i],2)))
             depthVal.InsertNextValue(depth_data[j, i])
         sgrid.SetPoints(points)
 
         sgrid.GetPointData().AddArray(wseVal)
-        sgrid.GetPointData().AddArray(ibcVal)
+#        sgrid.GetPointData().AddArray(ibcVal)
 #        sgrid.GetPointData().AddArray(velVal)
         sgrid.GetPointData().AddArray(depthVal)
     wseVal.SetName("WSE")
-    ibcVal.SetName("IBC")
+#    ibcVal.SetName("IBC")
 #    velVal.SetName("Velocity")
     depthVal.SetName("Depth")
 
@@ -310,7 +310,7 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     cellLocator2D.SetDataSet(SGrid)
     cellLocator2D.BuildLocator()
     WSE_2D = SGrid.GetPointData().GetScalars('WSE')
-    IBC_2D = SGrid.GetPointData().GetScalars('IBC')
+#    IBC_2D = SGrid.GetPointData().GetScalars('IBC')
 #    Velocity_2D = SGrid.GetPointData().GetScalars('Velocity')
     Depth_2D = SGrid.GetPointData().GetScalars('Depth')
     
@@ -346,7 +346,7 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     # Extract WSEs for the given Q for the pixel center coordinate of the area of interest
     # Create container for coordinate of the area of interest  
     studyareaWSE_box = np.zeros(study_area_tbl.shape[0])
-    studyareaIBC_box = np.zeros(study_area_tbl.shape[0])
+#    studyareaIBC_box = np.zeros(study_area_tbl.shape[0])
     studyareaDepth_box = np.zeros(study_area_tbl.shape[0])
 #    counter = 0
 #    line = study_area_tbl[counter]
@@ -363,12 +363,12 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
             WSEout = -9999
         studyareaWSE_box[counter] = WSEout
         # retrieve simualtion IBC 
-        try:
-            IBCout = getCellValue(SGrid, point2D, idlist1.GetId(0), IBC_2D)
-        except ValueError:
-            IBCout = -9999
-        studyareaIBC_box[counter] = IBCout
-        
+#        try:
+#            IBCout = getCellValue(SGrid, point2D, idlist1.GetId(0), IBC_2D)
+#        except ValueError:
+#            IBCout = -9999
+#        studyareaIBC_box[counter] = IBCout
+#        
         # retrieve simualtion Depth 
         try:
             Depthout = getCellValue(SGrid, point2D, idlist1.GetId(0), Depth_2D)
@@ -379,7 +379,7 @@ for Qi,row in enumerate(np.arange(0, Q_count, 1)):
     # put model WSE results for entire grid as a new column in the study_area_tbl
     study_area_tbl_out  = pd.DataFrame(study_area_tbl,columns = ['ID','X','Y','Z'])
     study_area_tbl_out['simWSE'] = studyareaWSE_box
-    study_area_tbl_out['simIBC'] = studyareaIBC_box
+#    study_area_tbl_out['simIBC'] = studyareaIBC_box
     study_area_tbl_out['simDepth'] = studyareaDepth_box
     study_area_tbl_out.to_csv(re.sub("\\.","_",str(Q))  + '_' + config.get('Params','study_area_tbl_out'),index = False)
      

@@ -206,48 +206,56 @@ def create_vtk_structured_grid(sgrid, hdf5_file_name, xoffset, yoffset):
     # type: (object) -> object
     file = h5py.File(hdf5_file_name, 'r')
     xcoord_grp = file['/iRIC/iRICZone/GridCoordinates/CoordinateX']
-#    print(xcoord_grp.keys())
+    # print(xcoord_grp.keys())
     ycoord_grp = file['/iRIC/iRICZone/GridCoordinates/CoordinateY']
-#    print(ycoord_grp.keys())
+    # print(ycoord_grp.keys())
     wse_grp = file['iRIC/iRICZone/FlowSolution1/WaterSurfaceElevation']
-#    print(wse_grp.keys())
+    # print(wse_grp.keys())
     topo_grp = file['iRIC/iRICZone/FlowSolution1/Elevation']
-#    print(topo_grp.keys())
-    ibc_grp = file['iRIC/iRICZone/FlowSolution1/IBC']
-    velx_grp = file['iRIC/iRICZone/FlowSolution1/VelocityX']
-    vely_grp = file['iRIC/iRICZone/FlowSolution1/VelocityY']
+    # print(topo_grp.keys())
+#    ibc_grp = file['iRIC/iRICZone/FlowSolution1/IBC']
+#    velx_grp = file['iRIC/iRICZone/FlowSolution1/VelocityX']
+#    vely_grp = file['iRIC/iRICZone/FlowSolution1/VelocityY']
+    depth_grp = file['iRIC/iRICZone/FlowSolution1/Depth']
+
     xcoord_data = xcoord_grp[u' data']
     ycoord_data = ycoord_grp[u' data']
     wse_data = wse_grp[u' data']
     topo_data = topo_grp[u' data']
-    ibc_data = ibc_grp[u' data']
-    velx_data = velx_grp[u' data']
-    vely_data = vely_grp[u' data']
+#    ibc_data = ibc_grp[u' data']
+#    velx_data = velx_grp[u' data']
+#    vely_data = vely_grp[u' data']
+    depth_data = depth_grp[u' data']
     # SGrid = vtk.vtkStructuredGrid()
     ny, nx, = xcoord_data.shape
-#    print(ny, nx)
+    # print(ny, nx)
     sgrid.SetDimensions(nx, ny, 1)
     points = vtk.vtkPoints()
     wseVal = vtk.vtkFloatArray()
     wseVal.SetNumberOfComponents(1)
-    ibcVal = vtk.vtkIntArray()
-    ibcVal.SetNumberOfComponents(1)
-    velVal = vtk.vtkFloatArray()
-    velVal.SetNumberOfComponents(1)
+#    ibcVal = vtk.vtkIntArray()
+#    ibcVal.SetNumberOfComponents(1)
+#    velVal = vtk.vtkFloatArray()
+#    velVal.SetNumberOfComponents(1)
+    depthVal = vtk.vtkFloatArray()
+    depthVal.SetNumberOfComponents(1)
     for j in range(ny):
         for i in range(nx):
             points.InsertNextPoint(xcoord_data[j, i] - xoffset, ycoord_data[j, i] - yoffset, 0.0)
             wseVal.InsertNextValue(wse_data[j, i])
-            ibcVal.InsertNextValue(ibc_data[j, i])
-            velVal.InsertNextValue(np.sqrt(np.power(velx_data[j, i],2) + np.power(vely_data[j,i],2)))
+#            ibcVal.InsertNextValue(ibc_data[j, i])
+#            velVal.InsertNextValue(np.sqrt(np.power(velx_data[j, i],2) + np.power(vely_data[j,i],2)))
+            depthVal.InsertNextValue(depth_data[j, i])
         sgrid.SetPoints(points)
 
         sgrid.GetPointData().AddArray(wseVal)
-        sgrid.GetPointData().AddArray(ibcVal)
-        sgrid.GetPointData().AddArray(velVal)
+#        sgrid.GetPointData().AddArray(ibcVal)
+#        sgrid.GetPointData().AddArray(velVal)
+        sgrid.GetPointData().AddArray(depthVal)
     wseVal.SetName("WSE")
-    ibcVal.SetName("IBC")
-    velVal.SetName("Velocity")
+#    ibcVal.SetName("IBC")
+#    velVal.SetName("Velocity")
+    depthVal.SetName("Depth")
 
 # Set the config file 
 setfile =  "E:\\_DoD\\_Camp_Pendleton_Survey\\IRIC\\_Modeling_dir\\_LowFlows_Model_v2\\Python_Directory\\Demo_Directory\\Roughness_iteration\\q4_0\\q4_00cms_config.ini"

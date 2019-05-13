@@ -256,13 +256,76 @@ def create_vtk_structured_grid(sgrid, hdf5_file_name, xoffset, yoffset):
 #    ibcVal.SetName("IBC")
 #    velVal.SetName("Velocity")
     depthVal.SetName("Depth")
+    
+# Same as above, but also calcs velocity for final calculation of mean depth and mean velocity
+def create_vtk_structured_grid_post(sgrid, hdf5_file_name, xoffset, yoffset):
+    # type: (object) -> object
+    file = h5py.File(hdf5_file_name, 'r')
+    xcoord_grp = file['/iRIC/iRICZone/GridCoordinates/CoordinateX']
+    # print(xcoord_grp.keys())
+    ycoord_grp = file['/iRIC/iRICZone/GridCoordinates/CoordinateY']
+    # print(ycoord_grp.keys())
+    wse_grp = file['iRIC/iRICZone/FlowSolution1/WaterSurfaceElevation']
+    # print(wse_grp.keys())
+    topo_grp = file['iRIC/iRICZone/FlowSolution1/Elevation']
+    # print(topo_grp.keys())
+#    ibc_grp = file['iRIC/iRICZone/FlowSolution1/IBC']
+    velx_grp = file['iRIC/iRICZone/FlowSolution1/VelocityX']
+    vely_grp = file['iRIC/iRICZone/FlowSolution1/VelocityY']
+    depth_grp = file['iRIC/iRICZone/FlowSolution1/Depth']
+
+    xcoord_data = xcoord_grp[u' data']
+    ycoord_data = ycoord_grp[u' data']
+    wse_data = wse_grp[u' data']
+    topo_data = topo_grp[u' data']
+#    ibc_data = ibc_grp[u' data']
+    velx_data = velx_grp[u' data']
+    vely_data = vely_grp[u' data']
+    depth_data = depth_grp[u' data']
+    # SGrid = vtk.vtkStructuredGrid()
+    ny, nx, = xcoord_data.shape
+    # print(ny, nx)
+    sgrid.SetDimensions(nx, ny, 1)
+    points = vtk.vtkPoints()
+    wseVal = vtk.vtkFloatArray()
+    wseVal.SetNumberOfComponents(1)
+#    ibcVal = vtk.vtkIntArray()
+#    ibcVal.SetNumberOfComponents(1)
+    velVal = vtk.vtkFloatArray()
+    velVal.SetNumberOfComponents(1)
+    depthVal = vtk.vtkFloatArray()
+    depthVal.SetNumberOfComponents(1)
+    for j in range(ny):
+        for i in range(nx):
+            points.InsertNextPoint(xcoord_data[j, i] - xoffset, ycoord_data[j, i] - yoffset, 0.0)
+            wseVal.InsertNextValue(wse_data[j, i])
+#            ibcVal.InsertNextValue(ibc_data[j, i])
+            velVal.InsertNextValue(np.sqrt(np.power(velx_data[j, i],2) + np.power(vely_data[j,i],2)))
+            depthVal.InsertNextValue(depth_data[j, i])
+        sgrid.SetPoints(points)
+
+        sgrid.GetPointData().AddArray(wseVal)
+#        sgrid.GetPointData().AddArray(ibcVal)
+        sgrid.GetPointData().AddArray(velVal)
+        sgrid.GetPointData().AddArray(depthVal)
+    wseVal.SetName("WSE")
+#    ibcVal.SetName("IBC")
+    velVal.SetName("Velocity")
+    depthVal.SetName("Depth")
+
 
 # Set the config file 
-setfile =  "E:\\_DoD\\_Camp_Pendleton_Survey\\IRIC\\_Modeling_dir\\_LowFlows_Model_v2\\Python_Directory\\Demo_Directory\\Roughness_iteration\\q4_0\\q4_00cms_config.ini"
+setfile =  "E:\\_DoD\\_Camp_Pendleton_Survey\\IRIC\\_Modeling_dir\\_LowFlows_Model_v2\\Python_Directory\\q1_8\\q1_8cms_config.ini"
 # Set up configuration file parser
 config = configparser.ConfigParser()
 # Read in the configuration file
 config.read(setfile)
+
+# read in coordinates of study area grid cell centers
+# csv format: pt number,X,Y,Z
+#study_area_coords = "E:\\_DoD\\_Camp_Pendleton_Survey\\IRIC\\_Modeling_dir\\_LowFlows_Model_v2\\smrf_DEM_v24_points_penz_m.txt"
+#study_area_tbl = np.genfromtxt(study_area_coords, delimiter=',', skip_header=0)
+study_area_tbl = np.genfromtxt(config.get('Params','study_area_coords'), delimiter=',', skip_header=0)
 
 # Get the directory location of the Obs WSE csv file (must be formatted correctly)
 meas_wse = pd.read_csv(config.get('Params','meas_WSE_File'))
@@ -411,9 +474,9 @@ for cdind in range(numcds.shape[0]):
     cellLocator2D.SetDataSet(SGrid)
     cellLocator2D.BuildLocator()
     WSE_2D = SGrid.GetPointData().GetScalars('WSE')
-    IBC_2D = SGrid.GetPointData().GetScalars('IBC')
+#    IBC_2D = SGrid.GetPointData().GetScalars('IBC')
     Depth_2D = SGrid.GetPointData().GetScalars('Depth')
-    Velocity_2D = SGrid.GetPointData().GetScalars('Velocity')
+#    Velocity_2D = SGrid.GetPointData().GetScalars('Velocity')
     
     # Create container for simulated WSEs at the coordinates of the Obs WSEs    
     simwse = np.zeros(meas_wse.shape[0])
@@ -488,6 +551,66 @@ for path in execute(["Fastmech.exe", hdf5_file_name]):
         meod = '-9999' # apply your error handling
     meod =  "".join(meod.split())
     meod = float(meod)
-end = datetime.datetime.now()
-print("Start time: " +str(start) + "End time: " + str(end))
+    
+# Construct grid with solution values and create vtk modules or tools for extracting data by point
+SGrid = vtk.vtkStructuredGrid()
+create_vtk_structured_grid_post(SGrid, hdf5_file_name, xoffset, yoffset)
+cellLocator2D = vtk.vtkCellLocator()
+cellLocator2D.SetDataSet(SGrid)
+cellLocator2D.BuildLocator()
+WSE_2D = SGrid.GetPointData().GetScalars('WSE')
+Depth_2D = SGrid.GetPointData().GetScalars('Depth')
+Vel_2D = SGrid.GetPointData().GetScalars('Velocity')
+
+# For the re-run model, eExtract WSEs for the given Q for the pixel center coordinate of the area of interest
+# Create container for coordinate of the area of interest  
+studyareaWSE_box = np.zeros(study_area_tbl.shape[0])
+studyareaDepth_box = np.zeros(study_area_tbl.shape[0])
+studyareaVel_box = np.zeros(study_area_tbl.shape[0])
+for counter,line in  enumerate (study_area_tbl):
+    point2D = [line[1]-xoffset, line[2]-yoffset, 0.0]
+    pt1 = [line[1]-xoffset, line[2]-yoffset, 10.0]
+    pt2 = [line[1]-xoffset, line[2]-yoffset, -10]
+    idlist1 = vtk.vtkIdList()
+    cellLocator2D.FindCellsAlongLine(pt1,pt2,0.0, idlist1)
+    # retrieve simulated WSEs for study area
+    try:
+        WSEout = getCellValue(SGrid, point2D, idlist1.GetId(0), WSE_2D)
+    except ValueError:
+        WSEout = -9999
+    studyareaWSE_box[counter] = WSEout
+    try:
+        Depthout = getCellValue(SGrid, point2D, idlist1.GetId(0), Depth_2D)
+    except ValueError:
+        Depthout = -9999
+    studyareaDepth_box[counter] = Depthout
+    try:
+        Velout = getCellValue(SGrid, point2D, idlist1.GetId(0), Vel_2D)
+    except ValueError:
+        Velout = -9999
+    studyareaVel_box[counter] = Velout
+# put model WSE results for entire grid as a new column in the study_area_tbl
+study_area_tbl_out  = pd.DataFrame(study_area_tbl,columns = ['ID','X','Y','Z'])
+study_area_tbl_out['WaterSurfaceElevation'] = studyareaWSE_box
+study_area_tbl_out['Velocity'] = studyareaVel_box
+study_area_tbl_out['Depth'] = studyareaDepth_box
+# save table as csv, if desired
+#    study_area_tbl_out.to_csv(re.sub("\\.","_",str(Q))  + '_' + config.get('Params','study_area_tbl_out'),index = False)
+
+# calculate average depth of inundation for all wetted cells (Depth != 0)
+study_area_tbl_out
+Inundated_cells = study_area_tbl_out[study_area_tbl_out['Depth'] > 0]
+Depth_col = Inundated_cells[['Depth']]
+mean_depth = Depth_col.mean(axis = 0)[0]
+
+Vel_col = Inundated_cells[['Velocity']]
+mean_Vel = Vel_col.mean(axis = 0)[0]
+
+
+print("Average Depth of inundation: " + str(mean_depth))
+print("Average Velocity: " + str(mean_Vel))
+
+# LEV = (0.01 - 0.001)x average depth x average velocity
+print("LEV range = " + str(0.01*mean_depth*mean_Vel) +' to ' + str(0.001*mean_depth*mean_Vel))
+
 

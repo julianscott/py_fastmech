@@ -466,6 +466,10 @@ print (meas_and_sim_wse2)
 df = pd.DataFrame(trmse,columns = ['Cd_Cd0','Cd_Cd1','Cd_Cd5','rmse','meon'])
 # get the row of min rmse
 best_mod = df.loc[df['rmse'].idxmin()]
+
+# alternatively, get a certain run 
+#best_mod = df.iloc[44,:]
+
 # re-run the fastmech model with the best model parameters and save to working directory
 Cd_Cd0 = best_mod['Cd_Cd0']
 Cd_Cd1 = best_mod['Cd_Cd1']
